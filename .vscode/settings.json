@@ -1,0 +1,48 @@
+// .vscode/settings.json
+{
+  // TypeScript/JavaScript
+  "typescript.preferences.autoImportFileExcludePatterns": ["**/node_modules/**"],
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  
+  // Formatting
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true,
+    "source.organizeImports": true
+  },
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  
+  // Tailwind CSS
+  "tailwindCSS.includeLanguages": {
+    "typescript": "javascript",
+    "typescriptreact": "javascript"
+  },
+  "tailwindCSS.experimental.classRegex": [
+    ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    ["cx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+  ],
+  
+  // File handling
+  "files.autoSave": "onFocusChange",
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.next": true
+  },
+  
+  // React specific
+  "emmet.includeLanguages": {
+    "typescriptreact": "html"
+  },
+  
+  // Terminal
+  "terminal.integrated.shellIntegration.enabled": true,
+  
+  // Debugging
+  "debug.onTaskErrors": "showErrors",
+  
+  // Git
+  "git.confirmSync": false,
+  "git.autofetch": true
+}

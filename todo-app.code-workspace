@@ -1,0 +1,34 @@
+// todo-app.code-workspace
+{
+  "folders": [
+    {
+      "name": "Frontend",
+      "path": "./frontend"
+    },
+    {
+      "name": "Backend",
+      "path": "./backend"
+    },
+    {
+      "name": "Shared",
+      "path": "./shared"
+    }
+  ],
+  "settings": {
+    "typescript.preferences.autoImportFileExcludePatterns": [
+      "**/node_modules/**"
+    ],
+    "typescript.suggest.autoImports": true
+  },
+  "extensions": {
+    "recommendations": [
+      "bradlc.vscode-tailwindcss",
+      "dsznajder.es7-react-js-snippets",
+      "ms-vscode.vscode-typescript-next",
+      "esbenp.prettier-vscode",
+      "dbaeumer.vscode-eslint",
+      "prisma.prisma",
+      "ms-vscode.vscode-node-azure-pack"
+    ]
+  }
+}
