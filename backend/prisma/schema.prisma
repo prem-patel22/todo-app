@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks     Task[]
+  sessions  Session[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Task {
+  id                String   @id @default(cuid())
+  title             String
+  description       String?
+  status            TaskStatus @default(TODO)
+  priority          Priority @default(MEDIUM)
+  dueDate           DateTime?
+  dueTime           String?
+  scheduledTime     DateTime?
+  estimatedDuration Int?     // in minutes
+  actualDuration    Int?     // in minutes
+  completionTime    DateTime?
+  category          String?
+  tags              String[]
+  isRecurring       Boolean  @default(false)
+  extraTimeTaken    Int?     // in minutes
+  timeSaved         Int?     // in minutes
+  extraTimeRequests Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  userId    String
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reminders Reminder[]
+  timeTrackers TimeTracker[]
+
+  @@map("tasks")
+}
+
+model Reminder {
+  id           String       @id @default(cuid())
+  type         ReminderType
+  scheduledAt  DateTime
+  sent         Boolean      @default(false)
+  message      String
+  createdAt    DateTime     @default(now())
+
+  // Relations
+  taskId String
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("reminders")
+}
+
+model TimeTracker {
+  id        String   @id @default(cuid())
+  action    String   // scheduled, started, completed, paused, extended
+  timestamp DateTime @default(now())
+  note      String?
+  duration  Int?     // in minutes
+
+  // Relations
+  taskId String
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("time_trackers")
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ReminderType {
+  START
+  COMPLETION
+  OVERDUE
+  PROGRESS_CHECK
+  EXTRA_TIME_COMPLETE
+}

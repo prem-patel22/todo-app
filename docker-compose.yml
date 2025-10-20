@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: todo_postgres
+    environment:
+      POSTGRES_DB: todo_app
+      POSTGRES_USER: todo_user
+      POSTGRES_PASSWORD: todo_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - todo_network
+
+  backend:
+    build: ./backend
+    container_name: todo_backend
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://todo_user:todo_password@postgres:5432/todo_app?schema=public
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - FRONTEND_URL=http://localhost:3000
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - todo_network
+    command: npm run dev
+
+volumes:
+  postgres_data:
+
+networks:
+  todo_network:
+    driver: bridge

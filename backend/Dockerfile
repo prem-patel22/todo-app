@@ -1,14 +1,23 @@
-# backend/Dockerfile
 FROM node:18-alpine
 
 WORKDIR /app
 
+# Copy package files
 COPY package*.json ./
-RUN npm ci --only=production
+COPY prisma ./prisma/
 
+# Install dependencies
+RUN npm ci
+
+# Copy source code
 COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Build the application
 RUN npm run build
 
-EXPOSE 3000
+EXPOSE 5000
 
-CMD ["node", "dist/index.js"]
+CMD ["npm", "start"]
