@@ -23,11 +23,17 @@ export interface Task {
   timeTrackers: TimeTracker[];
   extraTimeTaken?: number; // in minutes
   timeSaved?: number; // in minutes
+  extraTimeRequests?: number; // track how many extra time requests
 }
 
 export interface Reminder {
   id: string;
-  type: "start" | "completion" | "overdue" | "progress-check";
+  type:
+    | "start"
+    | "completion"
+    | "overdue"
+    | "progress-check"
+    | "extra-time-complete";
   scheduledAt: string;
   sent: boolean;
   message: string;
@@ -95,6 +101,10 @@ interface TaskStore {
     estimatedDuration?: number
   ) => void;
   cancelScheduledReminders: (taskId: string) => void;
+  scheduleExtraTimeCompletionCheck: (
+    taskId: string,
+    extraMinutes: number
+  ) => void;
 }
 
 // Mock initial data - Empty for user to add tasks
@@ -216,13 +226,25 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   scheduledTimeouts: new Map(),
 
   addTask: (taskData: CreateTaskData) => {
+    // Validate required fields
+    if (!taskData.dueDate || !taskData.dueTime) {
+      get().addNotification(
+        "Validation Error",
+        "Due date and time are required to create a task",
+        "error"
+      );
+      return;
+    }
+
     const taskId = Math.random().toString(36).substr(2, 9);
     const now = new Date().toISOString();
 
-    // Combine date and time for scheduledTime with precise timing
+    // FIXED: Combine date and time for scheduledTime with proper local timezone handling
     let scheduledTime = "";
     if (taskData.dueDate && taskData.dueTime) {
-      scheduledTime = `${taskData.dueDate}T${taskData.dueTime}:00.000Z`; // Add seconds and milliseconds for precision
+      // Create date in local timezone without timezone conversion issues
+      const localDate = new Date(`${taskData.dueDate}T${taskData.dueTime}`);
+      scheduledTime = localDate.toISOString(); // This preserves the intended local time
     }
 
     const newTask: Task = {
@@ -244,7 +266,8 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
             : "Task created",
         },
       ],
-      scheduledTime,
+      scheduledTime, // This now contains the correct time
+      extraTimeRequests: 0,
     };
 
     set((state) => ({
@@ -402,11 +425,79 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     }
   },
 
+  scheduleExtraTimeCompletionCheck: (taskId: string, extraMinutes: number) => {
+    const { cancelScheduledReminders } = get();
+
+    // Cancel any existing extra time reminders for this task
+    const extraTimeout = get().scheduledTimeouts.get(`extra-${taskId}`);
+    if (extraTimeout) {
+      clearTimeout(extraTimeout);
+    }
+
+    const timeUntilExtraTimeComplete = extraMinutes * 60000;
+
+    if (timeUntilExtraTimeComplete > 0) {
+      const extraTimeoutId = setTimeout(() => {
+        const { tasks, completeTask, addNotification, showSystemNotification } =
+          get();
+        const task = tasks.find((t) => t.id === taskId);
+
+        if (task && task.status === "in-progress") {
+          console.log(`Extra time completed for task: ${task.title}`);
+
+          // Add to app notifications
+          addNotification(
+            "⏰ Extra Time Completed",
+            `Your extra time for "${task.title}" is up. Have you completed the task?`,
+            "warning",
+            taskId
+          );
+
+          // Show system notification
+          showSystemNotification(
+            "⏰ Extra Time Completed",
+            `Your extra time for "${task.title}" is up. Click to check status.`,
+            taskId,
+            true
+          );
+
+          // Show browser alert if window is focused
+          if (document.hasFocus()) {
+            if (
+              confirm(
+                `EXTRA TIME COMPLETED\n\n"${task.title}"\n\nYour extra time is up. Have you completed this task?\n\nClick OK if completed, Cancel to request more time.`
+              )
+            ) {
+              completeTask(taskId);
+            } else {
+              const moreTime = prompt(
+                "How many more minutes do you need?",
+                "10"
+              );
+              if (moreTime && !isNaN(parseInt(moreTime))) {
+                get().requestExtraTime(taskId, parseInt(moreTime));
+              }
+            }
+          }
+        }
+      }, timeUntilExtraTimeComplete);
+
+      // Store timeout ID for potential cancellation
+      set((state) => ({
+        scheduledTimeouts: new Map(state.scheduledTimeouts).set(
+          `extra-${taskId}`,
+          extraTimeoutId
+        ),
+      }));
+    }
+  },
+
   cancelScheduledReminders: (taskId: string) => {
     const { scheduledTimeouts } = get();
 
     const startTimeout = scheduledTimeouts.get(`start-${taskId}`);
     const completionTimeout = scheduledTimeouts.get(`completion-${taskId}`);
+    const extraTimeout = scheduledTimeouts.get(`extra-${taskId}`);
 
     if (startTimeout) {
       clearTimeout(startTimeout);
@@ -414,11 +505,15 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     if (completionTimeout) {
       clearTimeout(completionTimeout);
     }
+    if (extraTimeout) {
+      clearTimeout(extraTimeout);
+    }
 
     set((state) => {
       const newTimeouts = new Map(state.scheduledTimeouts);
       newTimeouts.delete(`start-${taskId}`);
       newTimeouts.delete(`completion-${taskId}`);
+      newTimeouts.delete(`extra-${taskId}`);
       return { scheduledTimeouts: newTimeouts };
     });
   },
@@ -698,6 +793,7 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
             ? {
                 ...t,
                 dueTime: format(newDueTime, "HH:mm"),
+                extraTimeRequests: (t.extraTimeRequests || 0) + 1,
                 timeTrackers: [
                   ...t.timeTrackers,
                   {
@@ -717,6 +813,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         "info",
         taskId
       );
+
+      // Schedule extra time completion check
+      get().scheduleExtraTimeCompletionCheck(taskId, extraMinutes);
     }
   },
 

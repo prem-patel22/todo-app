@@ -81,13 +81,40 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     }
   };
 
+  // Fixed date formatting - use local timezone properly
   const formatDateTime = (dateString: string, timeString?: string) => {
     if (!dateString) return null;
-    const date = new Date(dateString);
+
     if (timeString) {
-      return `${date.toLocaleDateString()} ${timeString}`;
+      // Combine date and time for proper local display
+      const localDateTime = new Date(`${dateString}T${timeString}`);
+      return localDateTime.toLocaleString([], {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
     }
+
+    const date = new Date(dateString);
     return date.toLocaleDateString();
+  };
+
+  // Format scheduled time properly
+  const formatScheduledTime = (scheduledTime: string) => {
+    if (!scheduledTime) return null;
+    const date = new Date(scheduledTime);
+    return date.toLocaleString([], {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
   };
 
   // Calculate expected completion time
@@ -100,6 +127,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       return completionTime.toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
+        hour12: true,
       });
     }
     return null;
@@ -192,7 +220,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               new Date(task.scheduledTime) > new Date() && (
                 <div className="flex items-center">
                   <Clock4 size={12} className="mr-1" />
-                  Starts at: {new Date(task.scheduledTime).toLocaleString()}
+                  Starts at: {formatScheduledTime(task.scheduledTime)}
                 </div>
               )}
 

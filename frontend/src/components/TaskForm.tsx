@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTaskStore } from "../stores/taskStore";
-import { X, Calendar, Tag, Clock, Hourglass } from "lucide-react";
+import { X, Calendar, Tag, Clock, Hourglass, AlertCircle } from "lucide-react";
 
 interface TaskFormProps {
   task?: any;
@@ -20,6 +20,9 @@ export const TaskForm: React.FC<TaskFormProps> = ({ task, onClose }) => {
     category: "",
     tags: [] as string[],
   });
+  const [errors, setErrors] = useState<{ dueDate?: string; dueTime?: string }>(
+    {}
+  );
 
   useEffect(() => {
     if (task) {
@@ -37,13 +40,35 @@ export const TaskForm: React.FC<TaskFormProps> = ({ task, onClose }) => {
     }
   }, [task]);
 
+  const validateForm = () => {
+    const newErrors: { dueDate?: string; dueTime?: string } = {};
+
+    if (!formData.dueDate) {
+      newErrors.dueDate = "Due date is required";
+    }
+
+    if (!formData.dueTime) {
+      newErrors.dueTime = "Due time is required";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
     if (formData.title.trim()) {
-      // Combine date and time for scheduledTime
+      // Combine date and time for scheduledTime - FIXED TIMEZONE ISSUE
       let scheduledTime = "";
       if (formData.dueDate && formData.dueTime) {
-        scheduledTime = `${formData.dueDate}T${formData.dueTime}`;
+        // Create date in local timezone without timezone conversion
+        const localDate = new Date(`${formData.dueDate}T${formData.dueTime}`);
+        scheduledTime = localDate.toISOString();
       }
 
       const taskData = {
@@ -160,31 +185,55 @@ export const TaskForm: React.FC<TaskFormProps> = ({ task, onClose }) => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <Calendar size={16} className="inline mr-1" />
-                Due Date
+                Due Date *
               </label>
               <input
                 type="date"
+                required
                 value={formData.dueDate}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, dueDate: e.target.value }))
-                }
-                className="input-field"
+                onChange={(e) => {
+                  setFormData((prev) => ({ ...prev, dueDate: e.target.value }));
+                  setErrors((prev) => ({ ...prev, dueDate: undefined }));
+                }}
+                className={`input-field ${
+                  errors.dueDate
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                    : ""
+                }`}
               />
+              {errors.dueDate && (
+                <p className="text-red-600 text-xs mt-1 flex items-center">
+                  <AlertCircle size={12} className="mr-1" />
+                  {errors.dueDate}
+                </p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <Clock size={16} className="inline mr-1" />
-                Due Time
+                Due Time *
               </label>
               <input
                 type="time"
+                required
                 value={formData.dueTime}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, dueTime: e.target.value }))
-                }
-                className="input-field"
+                onChange={(e) => {
+                  setFormData((prev) => ({ ...prev, dueTime: e.target.value }));
+                  setErrors((prev) => ({ ...prev, dueTime: undefined }));
+                }}
+                className={`input-field ${
+                  errors.dueTime
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                    : ""
+                }`}
               />
+              {errors.dueTime && (
+                <p className="text-red-600 text-xs mt-1 flex items-center">
+                  <AlertCircle size={12} className="mr-1" />
+                  {errors.dueTime}
+                </p>
+              )}
             </div>
 
             <div>
@@ -289,11 +338,11 @@ export const TaskForm: React.FC<TaskFormProps> = ({ task, onClose }) => {
               🚀 Smart Time Management
             </h3>
             <ul className="text-green-700 text-sm list-disc list-inside space-y-1">
-              <li>Set any duration in minutes (1-1440 minutes / 24 hours)</li>
+              <li>Date and Time are required for proper scheduling</li>
               <li>System calculates expected completion time automatically</li>
               <li>Get notified when it's time to start and complete</li>
               <li>Track actual vs estimated time performance</li>
-              <li>Request extra time if needed</li>
+              <li>Request extra time if needed with follow-up notifications</li>
             </ul>
           </div>
 
